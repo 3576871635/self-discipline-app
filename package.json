@@ -1,0 +1,9 @@
+{
+  "name": "ik-self-discipline-app",
+  "version": "1.0.0",
+  "private": true,
+  "description": "ik自律助手",
+  "scripts": {
+    "start": "node server.js"
+  }
+}

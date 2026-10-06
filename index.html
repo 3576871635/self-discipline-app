@@ -1,0 +1,776 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f5f2ea">
+  <title>ik自律助手</title>
+  <style>
+    :root {
+      --ink: #202a2f;
+      --muted: #6b7679;
+      --line: #dfe4df;
+      --paper: #f5f2ea;
+      --surface: #fffdf8;
+      --green: #2d7660;
+      --green-dark: #205a49;
+      --mint: #d9eee4;
+      --yellow: #f4c95d;
+      --red: #b55b4b;
+      --shadow: 0 12px 30px rgba(31, 45, 44, .08);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--paper);
+      font: 16px/1.5 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    button, input, select, textarea { font: inherit; }
+    button { cursor: pointer; }
+    .app { min-height: 100vh; }
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 22px 22px 12px;
+    }
+    .brand { display: flex; gap: 10px; align-items: center; }
+    .brand-mark {
+      display: grid;
+      place-items: center;
+      width: 36px;
+      height: 36px;
+      border-radius: 12px;
+      color: white;
+      background: var(--green);
+      font-weight: 800;
+    }
+    .brand h1 { margin: 0; font-size: 1.12rem; letter-spacing: .01em; }
+    .brand p { margin: 1px 0 0; color: var(--muted); font-size: .78rem; }
+    .topbar-actions { display: flex; align-items: center; gap: 10px; }
+    .date-label { color: var(--muted); font-size: .85rem; text-align: right; }
+    main { max-width: 1080px; margin: 0 auto; padding: 8px 22px 112px; }
+    .screen { display: none; animation: appear .18s ease-out; }
+    .screen.active { display: block; }
+    @keyframes appear { from { opacity: .2; transform: translateY(3px); } to { opacity: 1; transform: none; } }
+    .intro { margin: 20px 0 26px; }
+    .eyebrow { margin: 0 0 5px; color: var(--green); font-size: .76rem; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; }
+    h2 { margin: 0; font-size: clamp(1.65rem, 5vw, 2.45rem); line-height: 1.12; }
+    h3 { margin: 0; font-size: 1.08rem; }
+    .muted { color: var(--muted); }
+    .section-head { display: flex; align-items: end; justify-content: space-between; gap: 14px; margin: 28px 0 12px; }
+    .section-head p { margin: 0; color: var(--muted); font-size: .86rem; }
+    .grid { display: grid; gap: 16px; }
+    .grid.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .panel {
+      padding: 20px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: var(--surface);
+      box-shadow: var(--shadow);
+    }
+    .hero-panel { display: grid; gap: 18px; grid-template-columns: minmax(0, 1fr) 230px; align-items: center; }
+    .hero-panel h3 { font-size: 1.42rem; }
+    .hero-panel p { margin: 8px 0 0; color: var(--muted); }
+    .progress-wrap { display: grid; gap: 8px; }
+    .progress-meta { display: flex; justify-content: space-between; color: var(--muted); font-size: .82rem; }
+    .progress { height: 10px; overflow: hidden; border-radius: 999px; background: #e8e8df; }
+    .progress > span { display: block; height: 100%; width: 0; border-radius: inherit; background: var(--green); transition: width .25s ease; }
+    .stat-number { color: var(--green-dark); font-size: 2.8rem; font-weight: 800; line-height: 1; text-align: right; }
+    .stat-label { margin-top: 7px; color: var(--muted); font-size: .83rem; text-align: right; }
+    .task-list { display: grid; gap: 10px; }
+    .task-row { display: grid; grid-template-columns: 1fr auto; gap: 14px; align-items: center; padding: 15px 0; border-bottom: 1px solid var(--line); }
+    .task-row[data-action="open-task"] { cursor: pointer; }
+    .task-row[data-action="open-task"]:hover { background: #fbfcf8; }
+    .task-row:last-child { border-bottom: 0; }
+    .task-row.done .task-title { color: var(--muted); text-decoration: line-through; }
+    .task-title { margin: 0; font-weight: 700; }
+    .task-meta { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; color: var(--muted); font-size: .8rem; }
+    .tag { display: inline-flex; align-items: center; min-height: 24px; padding: 2px 8px; border-radius: 999px; background: #edf2ed; color: var(--green-dark); font-size: .76rem; }
+    .tag.warn { background: #fff1cb; color: #785615; }
+    .tag.done { background: var(--mint); color: var(--green-dark); }
+    .task-parts { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 9px; }
+    .task-part { display: inline-flex; align-items: center; gap: 5px; padding: 4px 8px; border: 1px solid var(--line); border-radius: 8px; color: var(--muted); background: #fbfcf8; font-size: .76rem; }
+    .task-part strong { color: var(--green-dark); font-size: .7rem; }
+    .resource-list { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 9px; }
+    .resource-link { color: var(--green-dark); font-size: .78rem; font-weight: 700; text-decoration: none; }
+    .resource-link:hover { text-decoration: underline; }
+    .task-actions { display: flex; gap: 8px; align-items: center; }
+    .button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 42px;
+      padding: 9px 15px;
+      border: 1px solid transparent;
+      border-radius: 10px;
+      color: var(--ink);
+      background: #edf0eb;
+      font-weight: 700;
+      transition: background .15s, transform .15s;
+    }
+    .button:hover { transform: translateY(-1px); }
+    .button.primary { color: white; background: var(--green); }
+    .button.primary:hover { background: var(--green-dark); }
+    .button.ghost { border-color: var(--line); background: transparent; }
+    .button.danger { color: var(--red); background: #fff0ec; }
+    .button.small { min-height: 34px; padding: 6px 11px; font-size: .82rem; }
+    .empty { padding: 28px 8px; color: var(--muted); text-align: center; }
+    .empty strong { display: block; margin-bottom: 6px; color: var(--ink); font-size: 1.05rem; }
+    form { display: grid; gap: 15px; }
+    label { display: grid; gap: 6px; color: var(--muted); font-size: .86rem; font-weight: 650; }
+    input, select, textarea { width: 100%; border: 1px solid var(--line); border-radius: 9px; padding: 11px 12px; color: var(--ink); background: white; outline: none; }
+    input:focus, select:focus, textarea:focus { border-color: var(--green); box-shadow: 0 0 0 3px rgba(45, 118, 96, .13); }
+    textarea { min-height: 94px; resize: vertical; }
+    .form-actions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-end; margin-top: 3px; }
+    .note { margin: 0; padding: 11px 13px; border-left: 3px solid var(--yellow); background: #fff8df; color: #6d5724; font-size: .82rem; }
+    .goal-card { display: grid; gap: 10px; }
+    .goal-card + .goal-card { margin-top: 10px; }
+    .goal-line { display: flex; align-items: start; justify-content: space-between; gap: 14px; }
+    .goal-line strong { font-size: 1.04rem; }
+    .goal-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 7px; }
+    .stat-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+    .stat { padding: 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+    .stat strong { display: block; color: var(--green-dark); font-size: 1.65rem; }
+    .stat span { color: var(--muted); font-size: .78rem; }
+    .recommendation { display: grid; gap: 5px; padding: 15px; border-left: 4px solid var(--green); background: var(--mint); }
+    .recommendation p { margin: 0; color: var(--green-dark); }
+    .budget-note { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; padding: 10px 12px; border-radius: 9px; background: #eef5ef; color: var(--green-dark); font-size: .82rem; }
+    .budget-note.over { background: #fff1e8; color: #92503d; }
+    .mini-bars { display: grid; gap: 9px; }
+    .bar-row { display: grid; grid-template-columns: 58px 1fr 52px; gap: 9px; align-items: center; color: var(--muted); font-size: .76rem; }
+    .bar-track { height: 9px; overflow: hidden; border-radius: 99px; background: #e8e8df; }
+    .bar-fill { height: 100%; border-radius: inherit; background: var(--green); }
+    .bar-fill.actual { background: var(--yellow); }
+    .heatmap { display: grid; grid-template-columns: repeat(7, 1fr); gap: 7px; }
+    .heat-cell { display: grid; gap: 4px; min-height: 58px; padding: 7px 4px; border: 1px solid var(--line); border-radius: 8px; background: #f5f6f1; text-align: center; }
+    .heat-cell strong { font-size: .75rem; }
+    .heat-cell span { color: var(--muted); font-size: .68rem; }
+    .heat-cell.level-1 { background: #e0f0e7; }
+    .heat-cell.level-2 { background: #b9dfcb; }
+    .heat-cell.level-3 { color: white; background: var(--green); }
+    .material-list { display: grid; gap: 9px; }
+    .material-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 11px 0; border-bottom: 1px solid var(--line); }
+    .material-item:last-child { border-bottom: 0; }
+    .material-item p { margin: 0; font-weight: 700; }
+    .material-item span { display: block; margin-top: 3px; color: var(--muted); font-size: .76rem; }
+    .reminder-list { display: grid; gap: 10px; }
+    .reminder-item { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center; padding: 15px 0; border-bottom: 1px solid var(--line); }
+    .reminder-item:last-child { border-bottom: 0; }
+    .reminder-item.disabled { opacity: .58; }
+    .reminder-title { margin: 0; font-weight: 750; }
+    .reminder-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 7px; }
+    .toast { position: fixed; z-index: 20; right: 16px; bottom: 84px; display: none; width: min(380px, calc(100% - 32px)); padding: 16px; border: 1px solid var(--green); border-radius: 12px; background: var(--surface); box-shadow: 0 16px 40px rgba(24, 40, 37, .2); }
+    .toast.visible { display: grid; gap: 8px; }
+    .toast strong { color: var(--green-dark); }
+    .toast p { margin: 0; }
+    .toast-actions { display: flex; gap: 8px; }
+    .draft-source { margin: 9px 0 16px; padding: 9px 11px; border-left: 3px solid var(--green); border-radius: 7px; color: var(--green-dark); background: var(--mint); font-size: .82rem; font-weight: 700; }
+    .progress-board { overflow-x: auto; }
+    .progress-track { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; min-width: 620px; }
+    .progress-card { position: relative; display: grid; gap: 9px; min-height: 142px; padding: 14px; border: 1px solid var(--line); border-radius: 11px; background: #fff; }
+    .progress-card::after { content: ""; position: absolute; top: 26px; right: -11px; width: 11px; height: 1px; background: var(--line); }
+    .progress-card:last-child::after { display: none; }
+    .progress-card.current { border-color: var(--green); box-shadow: inset 0 3px 0 var(--green); }
+    .progress-card.done { background: var(--mint); }
+    .progress-card h4 { margin: 0; font-size: .9rem; }
+    .progress-card p { margin: 0; color: var(--muted); font-size: .76rem; }
+    .progress-card .tag { width: fit-content; }
+    .bottom-nav { position: fixed; z-index: 10; right: 0; bottom: 0; left: 0; display: flex; justify-content: center; padding: 9px 16px calc(9px + env(safe-area-inset-bottom)); border-top: 1px solid var(--line); background: rgba(255, 253, 248, .96); backdrop-filter: blur(12px); }
+    .nav-inner { display: grid; width: min(680px, 100%); grid-template-columns: repeat(4, 1fr); gap: 6px; }
+    .nav-button { padding: 9px 7px; border: 0; border-radius: 9px; color: var(--muted); background: transparent; font-weight: 700; }
+    .nav-button.active { color: var(--green-dark); background: var(--mint); }
+    dialog { width: min(460px, calc(100% - 28px)); padding: 0; border: 0; border-radius: 15px; color: var(--ink); background: var(--surface); box-shadow: 0 22px 60px rgba(25, 36, 35, .22); }
+    dialog::backdrop { background: rgba(24, 33, 32, .32); }
+    .dialog-body { padding: 22px; }
+    .dialog-body h3 { margin-bottom: 4px; }
+    .dialog-body .muted { margin: 0 0 16px; font-size: .86rem; }
+    .timer-panel { position: fixed; z-index: 8; right: 16px; bottom: 82px; display: none; width: min(360px, calc(100% - 32px)); padding: 16px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); box-shadow: 0 15px 40px rgba(24, 40, 37, .18); }
+    .timer-panel.visible { display: grid; gap: 10px; }
+    .timer-top { display: flex; align-items: start; justify-content: space-between; gap: 12px; }
+    .timer-value { color: var(--green-dark); font-size: 2.2rem; font-variant-numeric: tabular-nums; font-weight: 800; }
+    .timer-controls { display: flex; gap: 8px; }
+    .timer-mode { color: var(--muted); font-size: .75rem; }
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+    @media (max-width: 700px) {
+      .topbar { padding-top: 16px; }
+      main { padding-right: 16px; padding-left: 16px; }
+      .hero-panel, .grid.two { grid-template-columns: 1fr; }
+      .stat-number, .stat-label { text-align: left; }
+      .task-row { grid-template-columns: 1fr; gap: 9px; }
+      .task-actions { justify-content: flex-start; }
+      .stat-grid { gap: 8px; }
+      .stat { padding: 12px 10px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">自</div>
+        <div><h1>ik自律助手</h1><p>把下一步变得清楚</p></div>
+      </div>
+      <div class="topbar-actions"><div class="date-label" id="todayLabel"></div><button class="button ghost small" data-action="go-home" title="返回主页">⌂ 主页</button></div>
+    </header>
+
+    <main>
+      <section class="screen active" data-screen="today">
+        <div class="intro"><p class="eyebrow">今日计划</p><h2>今天，专注下一步。</h2></div>
+        <div class="panel hero-panel">
+          <div>
+            <h3 id="todayHeadline">还没有安排今天的学习</h3>
+            <p id="todaySubline">先创建一个学习目标，生成第一份可执行计划。</p>
+            <div class="progress-wrap" style="margin-top:18px">
+              <div class="progress-meta"><span>今日进度</span><strong id="todayProgressText">0%</strong></div>
+              <div class="progress"><span id="todayProgressBar"></span></div>
+            </div>
+            <div class="budget-note" id="todayBudgetNote"><span>今日时间预算</span><strong>0 / 0 分钟</strong></div>
+            <div class="form-actions" style="margin-top:16px"><button class="button primary small" data-action="generate-ai-demo">生成 AI 8 天示例</button><button class="button ghost small" data-action="new-goal">+ 新建目标</button></div>
+          </div>
+          <div><div class="stat-number" id="todayMinutes">0</div><div class="stat-label">今日学习分钟</div></div>
+        </div>
+
+        <div class="section-head"><div><h3>今天要做什么</h3><p id="todayTaskMeta">还没有任务</p></div><button class="button primary small" data-action="new-goal">+ 新建目标</button></div>
+        <div class="panel"><div class="task-list" id="todayTasks"></div></div>
+      </section>
+
+      <section class="screen" data-screen="plan">
+        <div class="intro"><p class="eyebrow">计划</p><h2>把目标拆成今天能做的事。</h2></div>
+        <div class="grid two">
+          <div class="panel">
+            <h3>新建学习目标</h3>
+            <p class="muted" style="margin:6px 0 16px">填写约束后，先生成一份可编辑的任务草案。</p>
+            <form id="goalForm">
+              <label>快速套用模板<select name="template"><option value="blank" selected>自定义目标</option><option value="ai">AI 基本工作流 8 天</option><option value="cpp">C++ 8 天入门</option><option value="javascript">JavaScript 入门</option><option value="exam">考试复习</option><option value="reading">读完一本书</option></select></label>
+              <label>你想学什么？<input name="title" required placeholder="例如：30 天学完 JavaScript 基础"></label>
+              <div class="grid two">
+                <label>截止日期<input name="deadline" type="date" required></label>
+                <label>每天可用分钟<input name="dailyMinutes" type="number" min="10" max="480" value="45" required></label>
+              </div>
+              <div class="grid two">
+                <label>当前基础<select name="level"><option>零基础</option><option selected>有一些基础</option><option>比较熟悉</option></select></label>
+                <label>学习偏好<select name="preference"><option selected>先理解，再练习</option><option>以练习为主</option><option>以复习和测验为主</option></select></label>
+              </div>
+              <label>可选学习资料链接<input name="resourceUrl" type="url" placeholder="https://...（可留空）"></label>
+              <p class="note">通过 server.js 打开时会请求后端 Mock API；直接打开本地文件时会回退到浏览器内置模板。两种方式都必须由你确认后才写入计划。</p>
+              <div class="form-actions"><button class="button ghost small" type="button" data-action="generate-ai-demo">生成 AI 8 天示例</button><button class="button primary" type="submit">生成任务草案</button></div>
+            </form>
+          </div>
+          <div class="panel">
+            <div class="section-head" style="margin-top:0"><div><h3>我的目标</h3><p>当前设备保存</p></div></div>
+            <div id="goalsList"></div>
+          </div>
+        </div>
+        <div class="section-head"><div><h3>全部任务</h3><p>确认草案后才会进入这里</p></div></div>
+        <div class="panel"><div class="task-list" id="allTasks"></div></div>
+        <div class="section-head"><div><h3>学习资料架</h3><p>集中查看所有任务的可选资料</p></div></div>
+        <div class="panel"><div class="material-list" id="materialsShelf"></div></div>
+      </section>
+
+      <section class="screen" data-screen="reminders">
+        <div class="intro"><p class="eyebrow">日常提醒</p><h2>让重要的小事有一个入口。</h2></div>
+        <div class="grid two">
+          <div class="panel">
+            <h3 id="reminderFormTitle">新增提醒</h3>
+            <p class="muted" style="margin:6px 0 16px">设置每天提醒几次，次数可以随时调整。</p>
+            <form id="reminderForm">
+              <label>提醒内容<input name="content" required maxlength="60" placeholder="例如：喝水、拉伸、复习单词"></label>
+              <label>每天提示次数<input name="timesPerDay" type="number" min="1" max="24" value="6" required></label>
+              <div class="grid two"><label>开始时间<input name="startTime" type="time" value="08:00" required></label><label>结束时间<input name="endTime" type="time" value="22:00" required></label></div>
+              <div class="grid two"><label>安静开始<input name="quietStart" type="time" value="22:00" required></label><label>安静结束<input name="quietEnd" type="time" value="08:00" required></label></div>
+              <label>稍后提醒（分钟）<input name="snoozeMinutes" type="number" min="5" max="120" value="10" required></label>
+              <label style="display:flex;align-items:center;gap:8px"><input name="enabled" type="checkbox" checked style="width:auto">启用这个提醒</label>
+              <div class="form-actions"><button class="button ghost" type="button" id="cancelReminderEdit" hidden>取消编辑</button><button class="button primary" type="submit" id="saveReminderButton">添加提醒</button></div>
+            </form>
+            <p class="note" style="margin-top:15px">提醒会在设定时段内按次数均匀出现，安静时段不会弹出。本地网页需要保持打开；关闭网页后不会保证收到系统通知。</p>
+          </div>
+          <div class="panel">
+            <div class="section-head" style="margin-top:0"><div><h3>今天的提醒</h3><p>完成次数只保存在当前设备</p></div></div>
+            <div class="reminder-list" id="remindersList"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="screen" data-screen="records">
+        <div class="intro"><p class="eyebrow">记录</p><h2>看见真实的学习节奏。</h2></div>
+        <div class="stat-grid">
+          <div class="stat"><strong id="recordDays">0</strong><span>有学习记录的天数</span></div>
+          <div class="stat"><strong id="recordMinutes">0</strong><span>累计学习分钟</span></div>
+          <div class="stat"><strong id="recordRate">0%</strong><span>任务完成率</span></div>
+        </div>
+        <div class="section-head"><div><h3>下一步建议</h3><p>根据你已经提交的反馈</p></div></div>
+        <div class="recommendation" id="recommendation"><strong>完成一次任务后，这里会出现建议。</strong><p>先回到今日计划，开始第一个计时。</p></div>
+        <div class="section-head"><div><h3>学习进程</h3><p>用阶段卡片看见从理解到实操的推进</p></div></div>
+        <div class="panel progress-board" id="progressBoard"><div class="empty"><strong>建立目标后，这里会出现进程卡片</strong>每个阶段可以同时包含概念学习和项目实操。</div></div>
+        <div class="section-head"><div><h3>近 7 天学习热力图</h3><p>颜色越深，实际学习时间越多</p></div></div>
+        <div class="panel"><div class="heatmap" id="weeklyHeatmap"></div></div>
+        <div class="section-head"><div><h3>计划与实际</h3><p>用实际用时调整下一周的安排</p></div></div>
+        <div class="panel"><div class="mini-bars" id="plannedActual"></div></div>
+        <div class="section-head"><div><h3>本周复盘</h3><p>把记录变成下一步调整</p></div></div>
+        <div class="recommendation" id="weeklyReview"><strong>完成几次学习后，这里会出现本周总结。</strong><p>先完成一项任务并记录实际用时。</p></div>
+        <div class="section-head"><div><h3>最近反馈</h3><p>只保存在当前设备</p></div></div>
+        <div class="panel"><div class="task-list" id="feedbackList"></div></div>
+      </section>
+    </main>
+
+    <div class="timer-panel" id="timerPanel" aria-live="polite">
+      <div class="timer-top"><div><p class="eyebrow" style="margin:0">正在专注</p><strong id="timerTaskName">任务</strong><div class="timer-mode" id="timerModeLabel">自由计时</div></div><div class="timer-value" id="timerValue">00:00</div></div>
+      <div class="timer-controls"><button class="button ghost small" id="timerPause">暂停</button><button class="button primary small" id="timerFinish">完成并反馈</button></div>
+    </div>
+
+    <nav class="bottom-nav" aria-label="主要导航"><div class="nav-inner">
+      <button class="nav-button active" data-nav="today">今日</button>
+      <button class="nav-button" data-nav="plan">计划</button>
+      <button class="nav-button" data-nav="reminders">提醒</button>
+      <button class="nav-button" data-nav="records">记录</button>
+    </div></nav>
+  </div>
+
+  <dialog id="draftDialog"><div class="dialog-body"><h3>确认任务草案</h3><p class="draft-source" id="draftSource">来源将在生成后显示。</p><form id="draftForm"><div id="draftFields"></div><div class="form-actions"><button class="button ghost" type="button" data-action="close-draft">再想想</button><button class="button primary" type="submit">确认计划</button></div></form></div></dialog>
+  <dialog id="feedbackDialog"><div class="dialog-body"><h3>完成一次任务</h3><p class="muted" id="feedbackTaskName"></p><form id="feedbackForm"><label>这次完成了吗？<select name="completed"><option value="yes">完成了</option><option value="partial">完成了一部分</option><option value="no">没有完成</option></select></label><label>难度如何？<select name="difficulty"><option>轻松</option><option selected>合适</option><option>偏难</option></select></label><label>给下一次留一句话<textarea name="note" placeholder="例如：前 25 分钟很专注，后面需要拆小一点"></textarea></label><div class="form-actions"><button class="button primary" type="submit">保存反馈</button></div></form></div></dialog>
+  <dialog id="taskDetailDialog"><div class="dialog-body"><h3 id="detailTaskName">任务详情</h3><p class="muted" id="detailTaskDescription"></p><div id="detailTaskBody"></div><div class="form-actions"><button class="button ghost" type="button" data-action="postpone-task" data-task="">延期到明天</button><button class="button ghost" type="button" data-action="split-task" data-task="">拆分任务</button><button class="button ghost" type="button" data-action="go-home">返回主页</button><button class="button primary" type="button" id="detailStartButton">开始计时</button><button class="button primary" type="button" id="detailFocusButton">专注 25 分钟</button></div></div></dialog>
+  <div class="toast" id="reminderToast" aria-live="polite"></div>
+
+  <script>
+    const STORAGE_KEY = 'self-discipline-app-v1';
+    const state = loadState();
+    let draft = null;
+    let timer = null;
+
+    const $ = (selector) => document.querySelector(selector);
+    const $$ = (selector) => [...document.querySelectorAll(selector)];
+    const dateKey = (value) => { const date = value instanceof Date ? value : new Date(value); return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`; };
+    const today = () => dateKey(new Date());
+    const uid = (prefix) => `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    const formatDate = (value) => new Intl.DateTimeFormat('zh-CN', { month: 'long', day: 'numeric', weekday: 'short' }).format(new Date(`${value}T12:00:00`));
+    const escapeHtml = (value) => String(value).replace(/[&<>'"]/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[char]));
+    const safeUrl = (value) => { try { const url = new URL(value); return ['http:', 'https:'].includes(url.protocol) ? url.href : ''; } catch { return ''; } };
+
+    function loadState() {
+      const empty = { goals: [], tasks: [], sessions: [], feedbacks: [], reminders: [], reminderLogs: [] };
+      try {
+        const saved = JSON.parse(localStorage.getItem(STORAGE_KEY)) || empty;
+        return {
+          ...empty,
+          ...saved,
+          goals: Array.isArray(saved.goals) ? saved.goals : [],
+          sessions: Array.isArray(saved.sessions) ? saved.sessions : [],
+          feedbacks: Array.isArray(saved.feedbacks) ? saved.feedbacks : [],
+          reminders: Array.isArray(saved.reminders) ? saved.reminders.map((reminder) => ({ startTime: '08:00', endTime: '22:00', quietStart: '22:00', quietEnd: '08:00', snoozeMinutes: 10, ...reminder })) : [],
+          reminderLogs: Array.isArray(saved.reminderLogs) ? saved.reminderLogs : [],
+          tasks: Array.isArray(saved.tasks) ? saved.tasks.map((task) => ({ ...task, parts: Array.isArray(task.parts) ? task.parts : [], resources: Array.isArray(task.resources) ? task.resources : [] })) : []
+        };
+      } catch { return empty; }
+    }
+    function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+    function activeTasks() { return state.tasks.filter((task) => task.status !== 'skipped'); }
+    function completedTasks() { return state.tasks.filter((task) => task.status === 'done'); }
+    function taskName(taskId) { return state.tasks.find((task) => task.id === taskId)?.title || '未命名任务'; }
+    function minutesForDay(date) { return state.sessions.filter((session) => dateKey(session.startedAt) === date).reduce((sum, session) => sum + session.actualMinutes, 0); }
+    function plannedMinutesForDay(date) { return activeTasks().filter((task) => task.plannedDate === date).reduce((sum, task) => sum + (Number(task.estimatedMinutes) || 0), 0); }
+    function actualMinutesForDay(date) { return state.sessions.filter((session) => dateKey(session.startedAt) === date).reduce((sum, session) => sum + session.actualMinutes, 0); }
+    function goalForTask(task) { return state.goals.find((goal) => goal.id === task.goalId); }
+    function timeToMinutes(value, fallback) { const parts = String(value || '').split(':').map(Number); return Number.isFinite(parts[0]) && Number.isFinite(parts[1]) ? parts[0] * 60 + parts[1] : fallback; }
+    function inTimeWindow(value, start, end) { return start <= end ? value >= start && value < end : value >= start || value < end; }
+
+    function render() {
+      $('#todayLabel').textContent = formatDate(today());
+      renderToday(); renderGoals(); renderAllTasks(); renderMaterialsShelf(); renderReminders(); renderRecords(); renderProgressBoard(); renderWeeklyVisuals();
+    }
+
+    function renderToday() {
+      const tasks = activeTasks().filter((task) => task.plannedDate === today());
+      const done = tasks.filter((task) => task.status === 'done').length;
+      const percent = tasks.length ? Math.round(done / tasks.length * 100) : 0;
+      $('#todayHeadline').textContent = tasks.length ? (done === tasks.length ? '今天的学习完成了。' : '先完成眼前这一项。') : '还没有安排今天的学习';
+      $('#todaySubline').textContent = tasks.length ? `${tasks.length - done} 项任务还在等你，按自己的节奏开始。` : '先创建一个学习目标，生成第一份可执行计划。';
+      $('#todayProgressText').textContent = `${percent}%`;
+      $('#todayProgressBar').style.width = `${percent}%`;
+      $('#todayMinutes').textContent = minutesForDay(today());
+      $('#todayTaskMeta').textContent = tasks.length ? `${done}/${tasks.length} 项已完成` : '还没有任务';
+      const goalIds = [...new Set(tasks.map((task) => task.goalId))];
+      const budget = goalIds.reduce((sum, goalId) => sum + (Number(state.goals.find((goal) => goal.id === goalId)?.dailyMinutes) || 0), 0);
+      const budgetNote = $('#todayBudgetNote');
+      budgetNote.classList.toggle('over', budget > 0 && plannedMinutesForDay(today()) > budget);
+      budgetNote.innerHTML = `<span>今日计划 / 时间预算</span><strong>${plannedMinutesForDay(today())} / ${budget || 0} 分钟${budget > 0 && plannedMinutesForDay(today()) > budget ? ' · 超出' : ''}</strong>`;
+      $('#todayTasks').innerHTML = tasks.length ? tasks.map(taskMarkup).join('') : '<div class="empty"><strong>今天还没有任务</strong>从计划页创建一个目标，先安排一个最小步骤。</div>';
+    }
+
+    function taskMarkup(task) {
+      const status = task.status === 'done' ? '<span class="tag done">已完成</span>' : task.status === 'skipped' ? '<span class="tag warn">已跳过</span>' : `<span class="tag">${task.estimatedMinutes} 分钟</span>`;
+      const action = task.status === 'done' ? '' : `<button class="button primary small" data-action="start-timer" data-task="${task.id}">${timer?.taskId === task.id ? '计时中' : '开始'}</button><button class="button ghost small" data-action="skip-task" data-task="${task.id}">跳过</button>`;
+      const parts = (task.parts || []).length ? `<div class="task-parts">${task.parts.map((part) => `<span class="task-part"><strong>${escapeHtml(part.label)}</strong>${escapeHtml(part.title)}</span>`).join('')}</div>` : '';
+      const resources = (task.resources || []).map((resource) => { const url = safeUrl(resource.url); return url ? `<a class="resource-link" href="${escapeHtml(url)}" target="_blank" rel="noreferrer">↗ ${escapeHtml(resource.label || '打开学习资料')}</a>` : ''; }).filter(Boolean).join('');
+      return `<article class="task-row ${task.status === 'done' ? 'done' : ''}" data-action="open-task" data-task="${task.id}" tabindex="0" role="button"><div><p class="task-title">${escapeHtml(task.title)}</p><div class="task-meta"><span>${formatDate(task.plannedDate)}</span>${status}</div>${parts}${resources ? `<div class="resource-list"><span class="muted">可选资料：</span>${resources}</div>` : ''}</div><div class="task-actions">${action}</div></article>`;
+    }
+
+    function renderGoals() {
+      $('#goalsList').innerHTML = state.goals.length ? state.goals.map((goal) => {
+        const tasks = state.tasks.filter((task) => task.goalId === goal.id);
+        const done = tasks.filter((task) => task.status === 'done').length;
+        const percent = tasks.length ? Math.round(done / tasks.length * 100) : 0;
+        return `<article class="goal-card"><div class="goal-line"><div><strong>${escapeHtml(goal.title)}</strong><div class="task-meta"><span>截止 ${formatDate(goal.deadline)}</span><span>${goal.dailyMinutes} 分钟/天</span></div></div><div class="goal-actions"><span class="tag">${percent}%</span><button class="button danger small" type="button" data-action="delete-goal" data-goal="${escapeHtml(goal.id)}">删除目标</button></div></div><div class="progress"><span style="width:${percent}%"></span></div></article>`;
+      }).join('') : '<div class="empty"><strong>还没有学习目标</strong>创建一个目标，开始建立你的节奏。</div>';
+    }
+
+    function renderAllTasks() {
+      const tasks = [...state.tasks].sort((a, b) => a.plannedDate.localeCompare(b.plannedDate));
+      $('#allTasks').innerHTML = tasks.length ? tasks.map(taskMarkup).join('') : '<div class="empty"><strong>确认计划后，任务会出现在这里</strong>先从左侧创建一个学习目标。</div>';
+    }
+
+    function renderMaterialsShelf() {
+      const materials = [];
+      state.tasks.forEach((task) => (task.resources || []).forEach((resource) => { const url = safeUrl(resource.url); if (url && !materials.some((item) => item.url === url)) materials.push({ ...resource, url, task }); }));
+      $('#materialsShelf').innerHTML = materials.length ? materials.map((item) => `<article class="material-item"><div><p>${escapeHtml(item.label || '学习资料')}</p><span>${escapeHtml(item.task.title)}</span></div><a class="button ghost small" href="${escapeHtml(item.url)}" target="_blank" rel="noreferrer">打开资料</a></article>`).join('') : '<div class="empty"><strong>还没有资料</strong>在创建目标或编辑任务时添加可选资料链接。</div>';
+    }
+
+    function reminderDoneCount(reminderId) {
+      return state.reminderLogs.filter((log) => log.reminderId === reminderId && dateKey(log.createdAt) === today()).length;
+    }
+
+    function renderReminders() {
+      if (!state.reminders.length) {
+        $('#remindersList').innerHTML = '<div class="empty"><strong>还没有日常提醒</strong>先添加一个你想持续记得的小事。<button class="button ghost small" style="margin-top:12px" data-action="quick-water">添加饮水提醒</button></div>';
+        return;
+      }
+      $('#remindersList').innerHTML = state.reminders.map((reminder) => {
+        const done = reminderDoneCount(reminder.id);
+        const status = reminder.enabled ? `${done}/${reminder.timesPerDay} 次` : '已停用';
+        return `<article class="reminder-item ${reminder.enabled ? '' : 'disabled'}"><div><p class="reminder-title">${escapeHtml(reminder.content)}</p><div class="task-meta"><span class="tag">每天 ${reminder.timesPerDay} 次</span><span class="tag">${escapeHtml(reminder.startTime || '08:00')}～${escapeHtml(reminder.endTime || '22:00')}</span><span class="tag ${done >= reminder.timesPerDay ? 'done' : ''}">${status}</span></div></div><div class="reminder-actions"><button class="button primary small" data-action="remind-now" data-reminder="${reminder.id}" ${reminder.enabled ? '' : 'disabled'}>现在提醒</button><button class="button ghost small" data-action="edit-reminder" data-reminder="${reminder.id}">编辑</button><button class="button ghost small" data-action="toggle-reminder" data-reminder="${reminder.id}">${reminder.enabled ? '停用' : '启用'}</button><button class="button danger small" data-action="delete-reminder" data-reminder="${reminder.id}">删除</button></div></article>`;
+      }).join('');
+    }
+
+    let toastTimer = null;
+    const promptedReminderSlots = new Set();
+    const snoozedReminders = new Map();
+
+    function showReminder(reminderId) {
+      const reminder = state.reminders.find((item) => item.id === reminderId);
+      if (!reminder || !reminder.enabled) return;
+      $('#reminderToast').innerHTML = `<strong>日常提醒</strong><p>${escapeHtml(reminder.content)}</p><div class="toast-actions"><button class="button primary small" data-action="mark-reminder" data-reminder="${reminder.id}">记为完成</button><button class="button ghost small" data-action="snooze-reminder" data-reminder="${reminder.id}">稍后 ${reminder.snoozeMinutes || 10} 分钟</button></div>`;
+      $('#reminderToast').classList.add('visible');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => $('#reminderToast').classList.remove('visible'), 20000);
+    }
+
+    function markReminder(reminderId) {
+      state.reminderLogs.push({ id: uid('reminder-log'), reminderId, createdAt: new Date().toISOString() });
+      save();
+      $('#reminderToast').classList.remove('visible');
+      renderReminders();
+    }
+
+    function snoozeReminder(reminderId) {
+      const reminder = state.reminders.find((item) => item.id === reminderId);
+      if (!reminder) return;
+      snoozedReminders.set(reminderId, Date.now() + (Number(reminder.snoozeMinutes) || 10) * 60000);
+      $('#reminderToast').classList.remove('visible');
+    }
+
+    function checkReminders() {
+      const now = new Date();
+      const currentMinute = now.getHours() * 60 + now.getMinutes();
+      const nowStamp = Date.now();
+      state.reminders.filter((reminder) => reminder.enabled).forEach((reminder) => {
+        if (snoozedReminders.get(reminder.id) > nowStamp) return;
+        if (snoozedReminders.get(reminder.id) <= nowStamp) snoozedReminders.delete(reminder.id);
+        const startMinute = timeToMinutes(reminder.startTime, 8 * 60);
+        const endMinute = timeToMinutes(reminder.endTime, 22 * 60);
+        const quietStart = timeToMinutes(reminder.quietStart, 22 * 60);
+        const quietEnd = timeToMinutes(reminder.quietEnd, 8 * 60);
+        if (inTimeWindow(currentMinute, quietStart, quietEnd)) return;
+        const count = Math.max(1, Number(reminder.timesPerDay) || 1);
+        const range = endMinute > startMinute ? endMinute - startMinute : 14 * 60;
+        const step = range / Math.max(1, count - 1);
+        for (let index = 0; index < count; index += 1) {
+          if (currentMinute !== Math.round(startMinute + step * index)) continue;
+          const slotKey = `${today()}-${reminder.id}-${index}`;
+          if (promptedReminderSlots.has(slotKey)) continue;
+          promptedReminderSlots.add(slotKey);
+          showReminder(reminder.id);
+        }
+      });
+    }
+
+    function resetReminderForm() {
+      const form = $('#reminderForm');
+      form.reset();
+      form.dataset.edit = '';
+      $('#reminderFormTitle').textContent = '新增提醒';
+      $('#saveReminderButton').textContent = '添加提醒';
+      $('#cancelReminderEdit').hidden = true;
+      form.elements.timesPerDay.value = 6;
+      form.elements.startTime.value = '08:00';
+      form.elements.endTime.value = '22:00';
+      form.elements.quietStart.value = '22:00';
+      form.elements.quietEnd.value = '08:00';
+      form.elements.snoozeMinutes.value = 10;
+      form.elements.enabled.checked = true;
+    }
+
+    function editReminder(reminderId) {
+      const reminder = state.reminders.find((item) => item.id === reminderId);
+      if (!reminder) return;
+      const form = $('#reminderForm');
+      form.dataset.edit = reminderId;
+      form.elements.content.value = reminder.content;
+      form.elements.timesPerDay.value = reminder.timesPerDay;
+      form.elements.startTime.value = reminder.startTime || '08:00';
+      form.elements.endTime.value = reminder.endTime || '22:00';
+      form.elements.quietStart.value = reminder.quietStart || '22:00';
+      form.elements.quietEnd.value = reminder.quietEnd || '08:00';
+      form.elements.snoozeMinutes.value = reminder.snoozeMinutes || 10;
+      form.elements.enabled.checked = reminder.enabled;
+      $('#reminderFormTitle').textContent = '编辑提醒';
+      $('#saveReminderButton').textContent = '保存修改';
+      $('#cancelReminderEdit').hidden = false;
+      switchScreen('reminders');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function addReminder(content, timesPerDay) {
+      state.reminders.push({ id: uid('reminder'), content, timesPerDay, startTime: '08:00', endTime: '22:00', quietStart: '22:00', quietEnd: '08:00', snoozeMinutes: 10, enabled: true, createdAt: new Date().toISOString() });
+      save();
+      renderReminders();
+    }
+
+    function renderRecords() {
+      const done = completedTasks().length;
+      const total = activeTasks().length;
+      const days = new Set(state.sessions.map((session) => dateKey(session.startedAt))).size;
+      const minutes = state.sessions.reduce((sum, session) => sum + session.actualMinutes, 0);
+      $('#recordDays').textContent = days;
+      $('#recordMinutes').textContent = minutes;
+      $('#recordRate').textContent = `${total ? Math.round(done / total * 100) : 0}%`;
+      const latest = state.feedbacks[state.feedbacks.length - 1];
+      $('#recommendation').innerHTML = latest ? `<strong>${latest.difficulty === '偏难' ? '下一次可以把任务拆小一点。' : latest.completed === 'yes' ? '当前节奏可以保持，明天继续一个清晰的小步骤。' : '先降低下一项任务的难度，再重新开始。'}</strong><p>${escapeHtml(latest.note || '你还没有留下备注。')}</p>` : '<strong>完成一次任务后，这里会出现建议。</strong><p>先回到今日计划，开始第一个计时。</p>';
+      $('#feedbackList').innerHTML = state.feedbacks.length ? [...state.feedbacks].reverse().slice(0, 8).map((item) => `<article class="task-row"><div><p class="task-title">${escapeHtml(taskName(item.taskId))}</p><div class="task-meta"><span>${formatDate(dateKey(item.createdAt))}</span><span>${item.difficulty}</span><span>${item.completed === 'yes' ? '完成' : item.completed === 'partial' ? '部分完成' : '未完成'}</span></div></div><span class="muted">${item.note ? escapeHtml(item.note) : '无备注'}</span></article>`).join('') : '<div class="empty"><strong>还没有反馈记录</strong>完成一次计时后，记录真实感受。</div>';
+    }
+
+    function recentDates() {
+      return Array.from({ length: 7 }, (_, index) => { const date = new Date(); date.setHours(12, 0, 0, 0); date.setDate(date.getDate() - (6 - index)); return date; });
+    }
+
+    function renderWeeklyVisuals() {
+      const dates = recentDates();
+      const values = dates.map((date) => actualMinutesForDay(dateKey(date)));
+      const maxActual = Math.max(1, ...values);
+      $('#weeklyHeatmap').innerHTML = dates.map((date, index) => { const minutes = values[index]; const level = minutes === 0 ? 0 : minutes < maxActual * .34 ? 1 : minutes < maxActual * .67 ? 2 : 3; return `<div class="heat-cell level-${level}"><strong>${new Intl.DateTimeFormat('zh-CN', { weekday: 'short' }).format(date)}</strong><span>${date.getMonth() + 1}/${date.getDate()}</span><span>${minutes} 分钟</span></div>`; }).join('');
+      const maxPlan = Math.max(1, ...dates.map((date) => plannedMinutesForDay(dateKey(date))));
+      $('#plannedActual').innerHTML = dates.map((date) => { const key = dateKey(date); const planned = plannedMinutesForDay(key); const actual = actualMinutesForDay(key); const label = new Intl.DateTimeFormat('zh-CN', { weekday: 'short' }).format(date); return `<div class="bar-row"><span>${label} 计划</span><div class="bar-track"><div class="bar-fill" style="width:${Math.round(planned / maxPlan * 100)}%"></div></div><strong>${planned} 分</strong></div><div class="bar-row"><span>${label} 实际</span><div class="bar-track"><div class="bar-fill actual" style="width:${Math.round(actual / maxPlan * 100)}%"></div></div><strong>${actual} 分</strong></div>`; }).join('');
+      const start = dateKey(dates[0]);
+      const weekTasks = activeTasks().filter((task) => task.plannedDate >= start && task.plannedDate <= today());
+      const done = weekTasks.filter((task) => task.status === 'done').length;
+      const planned = weekTasks.reduce((sum, task) => sum + (Number(task.estimatedMinutes) || 0), 0);
+      const actual = dates.reduce((sum, date) => sum + actualMinutesForDay(dateKey(date)), 0);
+      const completion = weekTasks.length ? Math.round(done / weekTasks.length * 100) : 0;
+      $('#weeklyReview').innerHTML = weekTasks.length || actual ? `<strong>本周完成 ${done}/${weekTasks.length} 个计划阶段，完成率 ${completion}%。</strong><p>计划 ${planned} 分钟，实际记录 ${actual} 分钟。${actual < planned * .6 ? '下周可以减少每日任务量或缩短单次时长。' : actual > planned * 1.25 ? '下周可以给高投入阶段多留一些缓冲。' : '当前节奏接近计划，可以保持。'}</p>` : '<strong>完成几次学习后，这里会出现本周总结。</strong><p>先完成一项任务并记录实际用时。</p>';
+    }
+
+    function deleteGoal(goalId) {
+      const goal = state.goals.find((item) => item.id === goalId);
+      if (!goal) return;
+      const taskIds = new Set(state.tasks.filter((task) => task.goalId === goalId).map((task) => task.id));
+      if (!window.confirm(`确定删除目标“${goal.title}”及其 ${taskIds.size} 个阶段吗？相关学习记录和反馈也会删除。`)) return;
+      if (timer && taskIds.has(timer.taskId)) {
+        clearInterval(timer.interval);
+        timer = null;
+        $('#timerPanel').classList.remove('visible');
+      }
+      state.goals = state.goals.filter((item) => item.id !== goalId);
+      state.tasks = state.tasks.filter((task) => !taskIds.has(task.id));
+      state.sessions = state.sessions.filter((session) => !taskIds.has(session.taskId));
+      state.feedbacks = state.feedbacks.filter((feedback) => !taskIds.has(feedback.taskId));
+      save();
+      render();
+    }
+
+    function renderProgressBoard() {
+      if (!state.goals.length) {
+        $('#progressBoard').innerHTML = '<div class="empty"><strong>建立目标后，这里会出现进程卡片</strong>每个阶段可以同时包含概念学习和项目实操。</div>';
+        return;
+      }
+      $('#progressBoard').innerHTML = state.goals.map((goal) => {
+        const tasks = state.tasks.filter((task) => task.goalId === goal.id).sort((a, b) => a.sortOrder - b.sortOrder);
+        const firstOpen = tasks.findIndex((task) => task.status !== 'done');
+        const cards = tasks.map((task, index) => {
+          const status = task.status === 'done' ? '已完成' : task.status === 'partial' ? '部分完成' : index === firstOpen ? '当前阶段' : '待开始';
+          return `<article class="progress-card ${task.status === 'done' ? 'done' : ''} ${index === firstOpen ? 'current' : ''}"><span class="tag">阶段 ${index + 1}</span><h4>${escapeHtml(task.title)}</h4><p>${(task.parts || []).map((part) => escapeHtml(part.label)).join(' + ') || '学习任务'}</p><strong>${status}</strong></article>`;
+        }).join('');
+        return `<div style="margin-bottom:20px"><div class="goal-line" style="margin-bottom:12px"><strong>${escapeHtml(goal.title)}</strong><span class="muted">${tasks.filter((task) => task.status === 'done').length}/${tasks.length} 阶段</span></div><div class="progress-track">${cards}</div></div>`;
+      }).join('');
+    }
+
+    function switchScreen(name) {
+      $$('.screen').forEach((screen) => screen.classList.toggle('active', screen.dataset.screen === name));
+      $$('.nav-button').forEach((button) => button.classList.toggle('active', button.dataset.nav === name));
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function buildDraft(form) {
+      const data = new FormData(form);
+      const start = new Date(`${today()}T12:00:00`);
+      const steps = [
+        { title: '确定学习范围', parts: [{ label: '概念', title: '明确核心概念与学习边界' }, { label: '实操', title: '列出一个可验证的小练习' }] },
+        { title: '学习核心概念', parts: [{ label: '概念', title: '理解关键概念和常见误区' }, { label: '实操', title: '用一个小例子验证理解' }] },
+        { title: '完成一次项目实操', parts: [{ label: '概念', title: '说明本阶段要解决的问题' }, { label: '实操', title: '完成一个可运行的小成果' }] },
+        { title: '复习与自测', parts: [{ label: '概念', title: '整理自己的知识卡片' }, { label: '实操', title: '独立完成一次小测或改进' }] }
+      ];
+      const dailyMinutes = Number(data.get('dailyMinutes'));
+      const resourceUrl = String(data.get('resourceUrl') || '').trim();
+      return {
+        goal: { id: uid('goal'), title: data.get('title').trim(), deadline: data.get('deadline'), dailyMinutes, level: data.get('level'), preference: data.get('preference'), createdAt: new Date().toISOString() },
+        tasks: steps.map((step, index) => { const date = new Date(start); date.setDate(start.getDate() + index); return { id: uid('task'), title: step.title, description: `${data.get('title').trim()}：${step.title}`, parts: step.parts, resources: safeUrl(resourceUrl) ? [{ label: '打开学习资料', url: resourceUrl }] : [], plannedDate: dateKey(date), estimatedMinutes: Math.max(10, Math.round(dailyMinutes * ([.6, 1, .9, .7][index]))), status: 'open', goalId: null, sortOrder: index }; })
+      };
+    }
+
+    async function requestPlan(form) {
+      const data = new FormData(form);
+      const response = await fetch('/api/plan', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ title: data.get('title'), deadline: data.get('deadline'), dailyMinutes: Number(data.get('dailyMinutes')), level: data.get('level'), preference: data.get('preference') }) });
+      if (!response.ok) throw new Error('plan api failed');
+      const plan = await response.json();
+      if (!Array.isArray(plan.stages) || !plan.stages.length) throw new Error('invalid plan');
+      return {
+        source: 'mock-api',
+        goal: { id: uid('goal'), title: String(data.get('title')).trim(), deadline: data.get('deadline'), dailyMinutes: Number(data.get('dailyMinutes')), level: data.get('level'), preference: data.get('preference'), createdAt: new Date().toISOString() },
+        tasks: plan.stages.map((stage, index) => ({ id: uid('task'), title: String(stage.title || `学习阶段 ${index + 1}`), description: `${data.get('title')}：${stage.title || ''}`, parts: [{ label: '概念', title: String(stage.concept || '') }, { label: '实操', title: String(stage.practice || '') }].filter((part) => part.title), resources: Array.isArray(stage.resources) ? stage.resources.filter((resource) => safeUrl(resource.url)).map((resource) => ({ label: resource.label || '打开学习资料', url: resource.url })) : [], plannedDate: stage.plannedDate, estimatedMinutes: Number(stage.estimatedMinutes) || Number(data.get('dailyMinutes')), status: 'open', goalId: null, sortOrder: index }))
+      };
+    }
+
+    function showDraft() {
+      $('#draftSource').textContent = draft.source === 'mock-api' ? '来源：后端 Mock API。每个阶段可以同时包含概念学习和项目实操；资料只是可选入口。' : '来源：本地模板。每个阶段可以同时包含概念学习和项目实操；资料只是可选入口。';
+      const sourceBadge = draft.source === 'mock-api' ? '<span class="tag done">后端 Mock API</span>' : '<span class="tag">本地模板</span>';
+      $('#draftFields').innerHTML = draft.tasks.map((task, index) => { const concept = task.parts?.find((part) => part.label === '概念')?.title || ''; const practice = task.parts?.find((part) => part.label === '实操')?.title || ''; return `<div class="panel" style="padding:14px;margin-bottom:10px"><div class="goal-line" style="margin-bottom:10px"><div style="display:flex;align-items:center;gap:8px"><strong>阶段 ${index + 1}</strong>${sourceBadge}</div><button class="button danger small" type="button" data-action="remove-draft-task" data-index="${index}" ${draft.tasks.length === 1 ? 'disabled' : ''}>删除阶段</button></div><label>任务名称<input name="task-${index}-title" value="${escapeHtml(task.title)}" required></label><div class="grid two" style="margin-top:10px"><label>安排日期<input name="task-${index}-date" type="date" value="${escapeHtml(task.plannedDate)}" required></label><label>预计分钟<input name="task-${index}-minutes" type="number" min="1" max="720" value="${task.estimatedMinutes}" required></label></div><div class="grid two" style="margin-top:10px"><label>概念学习<input name="task-${index}-concept" value="${escapeHtml(concept)}" placeholder="本阶段理解什么"></label><label>项目实操<input name="task-${index}-practice" value="${escapeHtml(practice)}" placeholder="本阶段做出什么"></label></div><label style="margin-top:10px">可选资料<input name="task-${index}-resource" type="url" value="${escapeHtml(task.resources[0]?.url || '')}" placeholder="https://...（可留空）"></label></div>`; }).join('') + '<button class="button ghost" type="button" data-action="add-draft-task">+ 添加阶段</button>';
+      if (!$('#draftDialog').open) $('#draftDialog').showModal();
+    }
+
+    function syncDraftFields() {
+      const form = $('#draftForm');
+      draft.tasks.forEach((task, index) => {
+        const title = form.elements[`task-${index}-title`];
+        if (!title) return;
+        task.title = title.value.trim();
+        task.plannedDate = form.elements[`task-${index}-date`].value;
+        task.estimatedMinutes = Math.max(1, Math.min(720, Number(form.elements[`task-${index}-minutes`].value) || 1));
+        const concept = form.elements[`task-${index}-concept`].value.trim();
+        const practice = form.elements[`task-${index}-practice`].value.trim();
+        task.parts = [{ label: '概念', title: concept }, { label: '实操', title: practice }].filter((part) => part.title);
+        const resourceUrl = form.elements[`task-${index}-resource`].value.trim();
+        task.resources = safeUrl(resourceUrl) ? [{ label: '打开学习资料', url: resourceUrl }] : [];
+      });
+    }
+
+    function addDraftTask() {
+      syncDraftFields();
+      const lastDate = draft.tasks.length ? new Date(`${draft.tasks[draft.tasks.length - 1].plannedDate}T12:00:00`) : new Date();
+      lastDate.setDate(lastDate.getDate() + 1);
+      draft.tasks.push({ id: uid('task'), title: '新学习阶段', description: '', parts: [{ label: '概念', title: '' }, { label: '实操', title: '' }], resources: [], plannedDate: dateKey(lastDate), estimatedMinutes: 30, status: 'open', goalId: null, sortOrder: draft.tasks.length });
+      showDraft();
+    }
+
+    function removeDraftTask(index) {
+      if (draft.tasks.length <= 1) return;
+      syncDraftFields();
+      draft.tasks.splice(index, 1);
+      draft.tasks.forEach((task, taskIndex) => { task.sortOrder = taskIndex; });
+      showDraft();
+    }
+
+    function openTaskDetail(taskId) {
+      const task = state.tasks.find((item) => item.id === taskId);
+      if (!task) return;
+      $('#detailTaskName').textContent = task.title;
+      $('#detailTaskDescription').textContent = `${formatDate(task.plannedDate)} · ${task.estimatedMinutes} 分钟`;
+      const parts = (task.parts || []).map((part) => `<span class="task-part"><strong>${escapeHtml(part.label)}</strong>${escapeHtml(part.title)}</span>`).join('');
+      const resources = (task.resources || []).map((resource) => { const url = safeUrl(resource.url); return url ? `<a class="resource-link" href="${escapeHtml(url)}" target="_blank" rel="noreferrer">↗ ${escapeHtml(resource.label || '打开学习资料')}</a>` : ''; }).filter(Boolean).join('');
+      $('#detailTaskBody').innerHTML = `<div class="task-parts">${parts || '<span class="muted">这个任务还没有细分说明。</span>'}</div>${resources ? `<div class="resource-list"><span class="muted">可选资料：</span>${resources}</div>` : '<p class="muted" style="margin-top:12px">这个阶段没有附加资料，可以直接开始。</p>'}`;
+      $('#detailStartButton').dataset.task = taskId;
+      $('#detailFocusButton').dataset.task = taskId;
+      $('#taskDetailDialog [data-action="postpone-task"]').dataset.task = taskId;
+      $('#taskDetailDialog [data-action="split-task"]').dataset.task = taskId;
+      $('#detailStartButton').disabled = task.status === 'done' || task.status === 'skipped';
+      $('#detailFocusButton').disabled = task.status === 'done' || task.status === 'skipped';
+      $('#detailStartButton').textContent = task.status === 'done' ? '已完成' : '开始计时';
+      $('#taskDetailDialog').showModal();
+    }
+
+    function postponeTask(taskId) {
+      const task = state.tasks.find((item) => item.id === taskId);
+      if (!task) return;
+      const date = new Date(`${task.plannedDate}T12:00:00`);
+      date.setDate(date.getDate() + 1);
+      task.postponedFrom = task.plannedDate;
+      task.plannedDate = dateKey(date);
+      save();
+      $('#taskDetailDialog').close();
+      render();
+      switchScreen('today');
+    }
+
+    function splitTask(taskId) {
+      const task = state.tasks.find((item) => item.id === taskId);
+      if (!task || task.status === 'done') return;
+      const minutes = Math.max(10, Math.round((Number(task.estimatedMinutes) || 20) / 2));
+      task.title = `${task.title}（第 1 部分）`;
+      task.estimatedMinutes = minutes;
+      const second = { ...task, id: uid('task'), title: task.title.replace('第 1 部分', '第 2 部分'), description: `${task.description || task.title}（第 2 部分）`, estimatedMinutes: minutes, status: 'open', sortOrder: (Number(task.sortOrder) || 0) + .01, parts: [...(task.parts || [])], resources: [...(task.resources || [])] };
+      state.tasks.push(second);
+      save();
+      $('#taskDetailDialog').close();
+      render();
+    }
+
+    function startTimer(taskId, mode = 'free') {
+      if (timer?.taskId === taskId) return;
+      if (timer) finishTimer(false);
+      timer = { taskId, mode, duration: mode === 'focus' ? 25 * 60 : 0, startedAt: new Date().toISOString(), elapsed: 0, paused: false };
+      $('#timerTaskName').textContent = taskName(taskId);
+      $('#timerModeLabel').textContent = mode === 'focus' ? '专注模式 · 25 分钟' : '自由计时';
+      $('#timerPanel').classList.add('visible');
+      $('#timerPause').textContent = '暂停';
+      timer.interval = setInterval(() => { if (!timer.paused) { timer.elapsed += 1; updateTimer(); } }, 1000);
+      updateTimer(); render();
+    }
+    function updateTimer() { if (!timer) return; if (timer.mode === 'focus' && timer.elapsed >= timer.duration) { finishTimer(true); return; } const value = timer.mode === 'focus' ? Math.max(0, timer.duration - timer.elapsed) : timer.elapsed; $('#timerValue').textContent = `${String(Math.floor(value / 60)).padStart(2, '0')}:${String(value % 60).padStart(2, '0')}`; }
+    function finishTimer(openFeedback = true) {
+      if (!timer) return;
+      clearInterval(timer.interval);
+      const finished = timer;
+      timer = null;
+      $('#timerPanel').classList.remove('visible');
+      if (finished.elapsed > 0) state.sessions.push({ id: uid('session'), taskId: finished.taskId, startedAt: finished.startedAt, endedAt: new Date().toISOString(), actualMinutes: Math.max(1, Math.round(finished.elapsed / 60)) });
+      if (openFeedback) { $('#feedbackTaskName').textContent = taskName(finished.taskId); $('#feedbackDialog').dataset.task = finished.taskId; $('#feedbackDialog').showModal(); }
+      save(); render();
+    }
+
+    const goalTemplates = {
+      ai: { title: '8天掌握AI基本工作流', dailyMinutes: 30, level: '有一些基础', preference: '先理解，再练习', resourceUrl: '' },
+      cpp: { title: '8天学完C++', dailyMinutes: 30, level: '有一些基础', preference: '先理解，再练习', resourceUrl: '' },
+      javascript: { title: '30 天学完 JavaScript 基础', dailyMinutes: 45, level: '有一些基础', preference: '先理解，再练习', resourceUrl: 'https://developer.mozilla.org/zh-CN/docs/Web/JavaScript' },
+      exam: { title: '30 天准备一门考试', dailyMinutes: 60, level: '有一些基础', preference: '以复习和测验为主', resourceUrl: '' },
+      reading: { title: '30 天读完一本书', dailyMinutes: 30, level: '零基础', preference: '先理解，再练习', resourceUrl: '' }
+    };
+    function applyGoalTemplate(name) { const preset = goalTemplates[name]; if (!preset) return; const form = $('#goalForm'); Object.entries(preset).forEach(([key, value]) => { form.elements[key].value = value; }); if (name === 'cpp' || name === 'ai') { const deadline = new Date(`${today()}T12:00:00`); deadline.setDate(deadline.getDate() + 8); form.elements.deadline.value = dateKey(deadline); } }
+    $('#goalForm [name="template"]').addEventListener('change', (event) => applyGoalTemplate(event.target.value));
+    $('#goalForm').addEventListener('submit', async (event) => { event.preventDefault(); const form = event.currentTarget; const button = form.querySelector('button[type="submit"]'); button.disabled = true; button.textContent = '生成中…'; try { draft = await requestPlan(form); } catch { draft = buildDraft(form); draft.source = 'local-template'; } finally { button.disabled = false; button.textContent = '生成任务草案'; } showDraft(); });
+    $('#draftForm').addEventListener('submit', (event) => { event.preventDefault(); draft.tasks.forEach((task, index) => { const form = event.currentTarget; task.title = form.elements[`task-${index}-title`].value.trim(); task.plannedDate = form.elements[`task-${index}-date`].value; task.estimatedMinutes = Math.max(1, Math.min(720, Number(form.elements[`task-${index}-minutes`].value) || 1)); const concept = form.elements[`task-${index}-concept`].value.trim(); const practice = form.elements[`task-${index}-practice`].value.trim(); task.parts = [{ label: '概念', title: concept }, { label: '实操', title: practice }].filter((part) => part.title); task.description = `${draft.goal.title}：${task.title}`; const resourceUrl = form.elements[`task-${index}-resource`].value.trim(); task.resources = safeUrl(resourceUrl) ? [{ label: '打开学习资料', url: resourceUrl }] : []; task.goalId = draft.goal.id; task.sortOrder = index; }); state.goals.push(draft.goal); state.tasks.push(...draft.tasks); save(); draft = null; $('#draftDialog').close(); event.currentTarget.reset(); $('#goalForm').reset(); render(); switchScreen('today'); });
+    $('#feedbackForm').addEventListener('submit', (event) => { event.preventDefault(); const data = new FormData(event.currentTarget); const taskId = $('#feedbackDialog').dataset.task; const task = state.tasks.find((item) => item.id === taskId); if (data.get('completed') === 'yes') task.status = 'done'; else if (data.get('completed') === 'no') task.status = 'open'; else task.status = 'partial'; state.feedbacks.push({ id: uid('feedback'), taskId, completed: data.get('completed'), difficulty: data.get('difficulty'), note: data.get('note').trim(), createdAt: new Date().toISOString() }); save(); $('#feedbackDialog').close(); event.currentTarget.reset(); render(); });
+    $('#reminderForm').addEventListener('submit', (event) => { event.preventDefault(); const form = event.currentTarget; const content = form.elements.content.value.trim(); const timesPerDay = Math.max(1, Math.min(24, Number(form.elements.timesPerDay.value) || 1)); const values = { content, timesPerDay, startTime: form.elements.startTime.value, endTime: form.elements.endTime.value, quietStart: form.elements.quietStart.value, quietEnd: form.elements.quietEnd.value, snoozeMinutes: Math.max(5, Math.min(120, Number(form.elements.snoozeMinutes.value) || 10)), enabled: form.elements.enabled.checked }; const reminder = state.reminders.find((item) => item.id === form.dataset.edit); if (reminder) Object.assign(reminder, values); else state.reminders.push({ id: uid('reminder'), ...values, createdAt: new Date().toISOString() }); save(); resetReminderForm(); renderReminders(); });
+    $('#cancelReminderEdit').addEventListener('click', resetReminderForm);
+    $('#timerPause').addEventListener('click', () => { if (!timer) return; timer.paused = !timer.paused; $('#timerPause').textContent = timer.paused ? '继续' : '暂停'; });
+    $('#timerFinish').addEventListener('click', () => finishTimer(true));
+    $('#detailStartButton').addEventListener('click', () => { const taskId = $('#detailStartButton').dataset.task; $('#taskDetailDialog').close(); startTimer(taskId); });
+    $('#detailFocusButton').addEventListener('click', () => { const taskId = $('#detailFocusButton').dataset.task; $('#taskDetailDialog').close(); startTimer(taskId, 'focus'); });
+    document.addEventListener('click', (event) => { const button = event.target.closest('[data-action], [data-nav]'); if (!button) return; if (button.dataset.action === 'open-task' && event.target.closest('a,button,input,select,textarea')) return; if (button.dataset.nav) switchScreen(button.dataset.nav); if (button.dataset.action === 'go-home') { if ($('#taskDetailDialog').open) $('#taskDetailDialog').close(); switchScreen('today'); } if (button.dataset.action === 'new-goal') switchScreen('plan'); if (button.dataset.action === 'generate-ai-demo') { switchScreen('plan'); applyGoalTemplate('ai'); $('#goalForm').requestSubmit(); } if (button.dataset.action === 'delete-goal') deleteGoal(button.dataset.goal); if (button.dataset.action === 'close-draft') $('#draftDialog').close(); if (button.dataset.action === 'close-detail') $('#taskDetailDialog').close(); if (button.dataset.action === 'add-draft-task') addDraftTask(); if (button.dataset.action === 'remove-draft-task') removeDraftTask(Number(button.dataset.index)); if (button.dataset.action === 'open-task') openTaskDetail(button.dataset.task); if (button.dataset.action === 'postpone-task') postponeTask(button.dataset.task); if (button.dataset.action === 'split-task') splitTask(button.dataset.task); if (button.dataset.action === 'start-timer') startTimer(button.dataset.task); if (button.dataset.action === 'quick-water') addReminder('喝水', 6); if (button.dataset.action === 'remind-now') showReminder(button.dataset.reminder); if (button.dataset.action === 'mark-reminder') markReminder(button.dataset.reminder); if (button.dataset.action === 'snooze-reminder') snoozeReminder(button.dataset.reminder); if (button.dataset.action === 'dismiss-reminder') $('#reminderToast').classList.remove('visible'); if (button.dataset.action === 'edit-reminder') editReminder(button.dataset.reminder); if (button.dataset.action === 'toggle-reminder') { const reminder = state.reminders.find((item) => item.id === button.dataset.reminder); if (reminder) { reminder.enabled = !reminder.enabled; save(); renderReminders(); } } if (button.dataset.action === 'delete-reminder') { if (window.confirm('确定删除这个提醒吗？')) { state.reminders = state.reminders.filter((item) => item.id !== button.dataset.reminder); state.reminderLogs = state.reminderLogs.filter((item) => item.reminderId !== button.dataset.reminder); save(); renderReminders(); } } if (button.dataset.action === 'skip-task') { const task = state.tasks.find((item) => item.id === button.dataset.task); if (task) { task.status = 'skipped'; save(); render(); } } });
+    const deadline = $('#goalForm [name="deadline"]'); const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 30); deadline.value = dateKey(tomorrow);
+    render();
+    setInterval(checkReminders, 30000);
+    checkReminders();
+  </script>
+</body>
+</html>
